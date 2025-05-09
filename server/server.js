@@ -24,7 +24,9 @@ const app = express();
 // Middleware
 app.use(cors({
   origin: process.env.FRONTEND_URL,
-  credentials: true
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
 // Raw body needed for Stripe webhook, so we set up a separate middleware for webhook
@@ -81,7 +83,7 @@ app.get('/', (req, res) => {
 
 // Error handling middleware
 app.use((err, req, res, next) => {
-    
+  console.error(err.stack);
   res.status(500).json({ message: 'Something went wrong my brotha!' });
 });
 

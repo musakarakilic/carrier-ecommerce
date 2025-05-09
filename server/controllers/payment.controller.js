@@ -21,7 +21,7 @@ const createPaymentIntent = async (req, res) => {
       });
     }
 
-    const { amount, currency = 'usd', metadata = {} } = req.body;
+    const { amount, orderId, currency = 'usd', metadata = {} } = req.body;
 
     if (!amount) {
       return res.status(400).json({
@@ -30,11 +30,19 @@ const createPaymentIntent = async (req, res) => {
       });
     }
 
+    // Prepare metadata
+    const paymentMetadata = { ...metadata };
+    
+    // If orderId is provided, add it to metadata
+    if (orderId) {
+      paymentMetadata.orderId = orderId;
+    }
+
     // Create payment intent
     const paymentIntent = await stripe.paymentIntents.create({
       amount: Math.round(amount * 100), // Convert to cents
       currency,
-      metadata,
+      metadata: paymentMetadata,
       payment_method_types: ['card'],
     });
 

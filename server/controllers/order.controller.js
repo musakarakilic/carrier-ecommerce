@@ -4,7 +4,7 @@ const Product = require('../models/product.model');
 // Get all orders (Different behavior for admin and user)
 const getOrders = async (req, res) => {
   try {
-    const { page = 1, limit = 10, status, sortBy = 'createdAt', order = 'desc' } = req.query;
+    const { page = 1, limit = 10, status, excludeStatus, sortBy = 'createdAt', order = 'desc', includeAll = false } = req.query;
     const query = {};
 
     // Admin can see all orders, user can only see their own orders
@@ -15,6 +15,16 @@ const getOrders = async (req, res) => {
     // Status filter
     if (status && status !== 'all') {
       query.status = status;
+    }
+    
+    // Exclude status filter
+    if (excludeStatus) {
+      query.status = { $ne: excludeStatus };
+    }
+    
+    // Exclude cancelled orders by default for non-admin users (or when not explicitly requested)
+    if (!includeAll && !status && !excludeStatus && req.user.role !== 'admin') {
+      query.status = { $ne: 'cancelled' };
     }
 
     // For sorting
@@ -266,12 +276,22 @@ const cancelOrder = async (req, res) => {
 // My orders (for user)
 const getMyOrders = async (req, res) => {
   try {
-    const { page = 1, limit = 10, status } = req.query;
+    const { page = 1, limit = 10, status, excludeStatus, includeAll = false } = req.query;
     const query = { user: req.user._id };
     
     // Status filter
     if (status && status !== 'all') {
       query.status = status;
+    }
+    
+    // Exclude status filter - allows filtering out cancelled orders
+    if (excludeStatus) {
+      query.status = { $ne: excludeStatus };
+    }
+    
+    // Exclude cancelled orders by default (or when not explicitly requested)
+    if (!includeAll && !status && !excludeStatus) {
+      query.status = { $ne: 'cancelled' };
     }
     
     const orders = await Order.find(query)

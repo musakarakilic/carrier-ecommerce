@@ -9,6 +9,8 @@ const {
   deleteProductImage 
 } = require('../controllers/upload.controller');
 
+// Base URL for uploads
+const BASE_URL = 'https://carrier-ecommerce.onrender.com';
 
 // Create upload directory
 const uploadDir = path.join(__dirname, '../uploads/products');
@@ -49,7 +51,7 @@ router.post('/products', protect, upload.array('images', 5), async (req, res) =>
       return res.status(400).json({ message: 'No files were uploaded' });
     }
 
-    const urls = req.files.map(file => `http://localhost:5000/uploads/products/${file.filename}`);
+    const urls = req.files.map(file => `${BASE_URL}/uploads/products/${file.filename}`);
     res.json({ 
       success: true,
       urls: urls,
@@ -71,7 +73,7 @@ router.post('/products/single', upload.single('image'), async (req, res) => {
       return res.status(400).json({ message: 'No file was uploaded' });
     }
 
-    const url = `http://localhost:5000/uploads/products/${req.file.filename}`;
+    const url = `${BASE_URL}/uploads/products/${req.file.filename}`;
       
     res.json({
       success: true,
