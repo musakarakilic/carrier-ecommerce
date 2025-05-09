@@ -77,7 +77,7 @@
       
       <!-- Product list -->
       <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-        <ProductCard 
+        <Card 
           v-for="product in displayedProducts" 
           :key="product._id"
           :product="product"
@@ -136,7 +136,7 @@
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import ProductCard from '../../components/ProductCard.vue';
+import Card from '../../components/molecules/Card/index.vue';
 import { productService } from '../../services/productService';
 
 const route = useRoute();
