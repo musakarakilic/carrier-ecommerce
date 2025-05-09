@@ -1,5 +1,4 @@
 import { createRouter, createWebHistory } from 'vue-router';
-import AdminLayout from '../views/admin/AdminLayout.vue';
 import Dashboard from '../views/admin/Dashboard.vue';
 import Products from '../views/admin/Products.vue';
 import Categories from '../views/admin/Categories.vue';
@@ -143,7 +142,7 @@ const routes = [
   },
   {
     path: '/admin',
-    component: AdminLayout,
+    component: () => import('../views/admin/AdminLayout.vue'),
     meta: { requiresAuth: true, requiresAdmin: true },
     children: [
       {
