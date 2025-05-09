@@ -1,13 +1,13 @@
 import { createRouter, createWebHistory } from 'vue-router';
-import AdminLayout from '../views/admin/AdminLayout.vue';
-import Dashboard from '../views/admin/Dashboard.vue';
-import Products from '../views/admin/Products.vue';
-import Categories from '../views/admin/Categories.vue';
-import Users from '../views/admin/Users.vue';
-import Orders from '../views/admin/Orders.vue';
-import Collections from '../views/admin/Collections.vue';
-import Brands from '../views/admin/Brands.vue';
-import Subscriptions from '../views/admin/Subscriptions.vue';
+import AdminLayout from '../views/Admin/AdminLayout.vue';
+import Dashboard from '../views/Admin/Dashboard.vue';
+import Products from '../views/Admin/Products.vue';
+import Categories from '../views/Admin/Categories.vue';
+import Users from '../views/Admin/Users.vue';
+import Orders from '../views/Admin/Orders.vue';
+import Collections from '../views/Admin/Collections.vue';
+import Brands from '../views/Admin/Brands.vue';
+import Subscriptions from '../views/Admin/Subscriptions.vue';
 
 
 const routes = [
