@@ -23,7 +23,9 @@ const app = express();
 
 // Middleware
 app.use(cors({
-  origin: 'http://localhost:5173', // Port where frontend is running
+  origin: process.env.NODE_ENV === 'production' 
+    ? [process.env.FRONTEND_URL, 'https://your-vercel-domain.vercel.app']
+    : 'http://localhost:5173',
   credentials: true
 }));
 
