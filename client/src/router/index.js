@@ -1,13 +1,4 @@
 import { createRouter, createWebHistory } from 'vue-router';
-import Dashboard from '../views/admin/Dashboard.vue';
-import Products from '../views/admin/Products.vue';
-import Categories from '../views/admin/Categories.vue';
-import Users from '../views/admin/Users.vue';
-import Orders from '../views/admin/Orders.vue';
-import Collections from '../views/admin/Collections.vue';
-import Brands from '../views/admin/Brands.vue';
-import Subscriptions from '../views/admin/Subscriptions.vue';
-
 
 const routes = [
   {
@@ -148,42 +139,42 @@ const routes = [
       {
         path: '',
         name: 'Dashboard',
-        component: Dashboard
+        component: () => import('../views/admin/Dashboard.vue')
       },
       {
         path: 'products',
         name: 'Products',
-        component: Products
+        component: () => import('../views/admin/Products.vue')
       },
       {
         path: 'categories',
         name: 'Categories',
-        component: Categories
+        component: () => import('../views/admin/Categories.vue')
       },
       {
         path: 'collections',
         name: 'Collections',
-        component: Collections
+        component: () => import('../views/admin/Collections.vue')
       },
       {
         path: 'brands',
         name: 'Brands',
-        component: Brands
+        component: () => import('../views/admin/Brands.vue')
       },
       {
         path: 'subscriptions',
         name: 'Subscriptions',
-        component: Subscriptions
+        component: () => import('../views/admin/Subscriptions.vue')
       },
       {
         path: 'users',
         name: 'Users',
-        component: Users
+        component: () => import('../views/admin/Users.vue')
       },
       {
         path: 'orders',
         name: 'AdminOrders',
-        component: Orders
+        component: () => import('../views/admin/Orders.vue')
       }
     ]
   }
