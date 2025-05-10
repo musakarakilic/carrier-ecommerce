@@ -21,9 +21,5 @@
     "VITE_IMAGE_BASE_URL": "https://carrier-ecommerce.onrender.com"
   },
   "buildCommand": "npm run build",
-  "outputDirectory": "dist",
-  "routes": [
-    { "handle": "filesystem" },
-    { "src": "/.*", "dest": "/index.html" }
-  ]
+  "outputDirectory": "dist"
 } 
