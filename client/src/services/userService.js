@@ -52,12 +52,17 @@ export const userService = {
 
   // Update user role
   updateRole: async (id, role) => {
-    return apiRequest('patch', `${API_ENDPOINTS.USERS}/${id}/role`, { role });
+    return apiRequest('put', `${API_ENDPOINTS.USERS}/${id}/role`, { role });
   },
 
   // Update user status
   updateStatus: async (id, active) => {
-    return apiRequest('patch', `${API_ENDPOINTS.USERS}/${id}/status`, { active });
+    return update(API_ENDPOINTS.USERS, id, { isActive: active });
+  },
+
+  // Activate user (reactivate a deactivated user)
+  activateUser: async (id) => {
+    return update(API_ENDPOINTS.USERS, id, { isActive: true });
   },
 
   // Profile operations

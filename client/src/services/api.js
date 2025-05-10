@@ -4,7 +4,7 @@ import { useToast } from 'vue-toastification';
 const toast = useToast();
 
 // Get environment variables
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://carrier-ecommerce.onrender.com';
 const API_ENDPOINT = import.meta.env.VITE_API_ENDPOINT || '/api';
 
 // Create a custom event for auth errors to handle them in a centralized way

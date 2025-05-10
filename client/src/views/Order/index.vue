@@ -122,6 +122,18 @@
         </div>
       </div>
     </div>
+    
+    <!-- Cancel Order Confirmation Modal -->
+    <ConfirmationModal
+      :is-open="showCancelModal"
+      title="Cancel Order"
+      message="Are you sure you want to cancel this order? This action cannot be undone."
+      confirm-text="Yes, Cancel Order"
+      cancel-text="No, Keep Order"
+      type="danger"
+      @confirm="confirmCancelOrder"
+      @cancel="hideCancelModal"
+    />
   </div>
 </template>
 
@@ -129,12 +141,17 @@
 import { ref, onMounted } from 'vue';
 import { orderService } from '@/services/orderService';
 import { useToast }  from 'vue-toastification';
+import ConfirmationModal from '@/components/molecules/ConfirmationModal.vue';
 
 const orders = ref([]);
 const loading = ref(true);
 const error = ref(null);
 const cancelling = ref(false);
 const toast = useToast();
+
+// Confirmation modal state
+const showCancelModal = ref(false);
+const selectedOrderId = ref(null);
 
 // Get orders
 const fetchOrders = async () => {
@@ -154,19 +171,20 @@ const fetchOrders = async () => {
 // Get status class based on order status
 const getStatusClass = (status) => {
   const statusClasses = {
-    'Pending': 'bg-yellow-100 text-yellow-800',
-    'Processing': 'bg-blue-100 text-blue-800',
-    'Shipped': 'bg-purple-100 text-purple-800',
-    'Delivered': 'bg-green-100 text-green-800',
-    'Cancelled': 'bg-red-100 text-red-800'
+    'pending': 'bg-yellow-100 text-yellow-800',
+    'processing': 'bg-blue-100 text-blue-800',
+    'shipped': 'bg-purple-100 text-purple-800',
+    'delivered': 'bg-green-100 text-green-800',
+    'cancelled': 'bg-red-100 text-red-800 border border-red-400 font-bold'
   };
   
-  return statusClasses[status] || 'bg-gray-100 text-gray-800';
+  return statusClasses[status.toLowerCase()] || 'bg-gray-100 text-gray-800';
 };
 
 // Get status text
 const getStatusText = (status) => {
-  return status;
+  // First letter uppercase
+  return status.charAt(0).toUpperCase() + status.slice(1).toLowerCase();
 };
 
 // Format price
@@ -182,14 +200,15 @@ const formatPrice = (price) => {
 
 // Cancel order
 const cancelOrder = async (orderId) => {
-  if (!confirm('Are you sure you want to cancel this order?')) {
-    return;
-  }
-  
+  selectedOrderId.value = orderId;
+  showCancelModal.value = true;
+};
+
+const confirmCancelOrder = async () => {
   cancelling.value = true;
   
   try {
-    await orderService.cancelOrder(orderId);
+    await orderService.cancelOrder(selectedOrderId.value);
     toast.success('Order cancelled successfully.');
     
     // Reload orders
@@ -199,7 +218,12 @@ const cancelOrder = async (orderId) => {
     console.error('Order cancellation error:', err);
   } finally {
     cancelling.value = false;
+    showCancelModal.value = false;
   }
+};
+
+const hideCancelModal = () => {
+  showCancelModal.value = false;
 };
 
 // Fetch orders when component is mounted

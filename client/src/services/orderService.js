@@ -2,10 +2,18 @@ import { API_ENDPOINTS, apiRequest, logInfo, logWarn, logError } from '../utils'
 
 export const orderService = {
   // Get user's orders
-  getUserOrders: async (page = 1, limit = 10, status = '') => {
-    const response = await apiRequest('get', `${API_ENDPOINTS.ORDERS}/myorders`, null, { 
-      page, limit, status 
-    });
+  getUserOrders: async (page = 1, limit = 10, status = '', includeNonActive = false) => {
+    const params = { page, limit };
+    
+    // If status is provided, use it for filtering
+    if (status) {
+      params.status = status;
+    } else if (!includeNonActive) {
+      // By default, exclude cancelled orders
+      params.excludeStatus = 'cancelled';
+    }
+    
+    const response = await apiRequest('get', `${API_ENDPOINTS.ORDERS}/myorders`, null, params);
     return response.orders || [];
   },
   
@@ -44,8 +52,8 @@ export const orderService = {
       
       logInfo('Payment status', { isPaid: response.isPaid ? 'Paid' : 'Unpaid' }, 'orderService');
       
-      // For quick testing - should be removed in production
-      if (response.paymentMethod === 'credit_card' && !response.isPaid) {
+      // Don't automatically set payment to paid for cancelled orders or for cash on delivery
+      if (response.status !== 'cancelled' && response.paymentMethod === 'credit_card' && !response.isPaid) {
         logInfo('Manually setting payment status to paid for testing', null, 'orderService');
         response.isPaid = true;
         response.paidAt = new Date().toISOString();

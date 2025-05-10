@@ -244,8 +244,9 @@
               
               <!-- Buttons -->
               <div class="pt-4 mt-2 border-t border-gray-200">
+                
                 <button 
-                  v-if="!order.isPaid && (order.status === 'Pending' || order.status === 'Processing')" 
+                  v-if="order.status?.toLowerCase() === 'pending' || order.status?.toLowerCase() === 'processing'" 
                   @click="cancelOrder" 
                   class="w-full bg-white border border-red-500 text-red-600 py-2 px-6 rounded-lg hover:bg-red-50 font-medium transition-colors duration-300 focus:outline-none flex items-center justify-center"
                   :disabled="isCancelling"
@@ -279,6 +280,18 @@
       </div>
     </template>
   </div>
+  
+  <!-- Order Cancellation Confirmation Modal -->
+  <ConfirmationModal
+    :is-open="showCancelModal"
+    title="Cancel Order"
+    message="Are you sure you want to cancel this order? This action cannot be undone."
+    confirm-text="Yes, Cancel Order"
+    cancel-text="No, Keep Order"
+    type="danger"
+    @confirm="handleConfirmCancel"
+    @cancel="closeModal"
+  />
 </template>
 
 <script setup>
@@ -286,6 +299,7 @@ import { ref, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { orderService } from '@/services/orderService';
 import { useToast } from 'vue-toastification';
+import ConfirmationModal from '@/components/molecules/ConfirmationModal.vue';
 
 const route = useRoute();
 const router = useRouter();
@@ -295,6 +309,9 @@ const order = ref({});
 const loading = ref(true);
 const error = ref(null);
 const isCancelling = ref(false);
+
+// Confirmation modal state
+const showCancelModal = ref(false);
 
 // Fetch order
 const fetchOrder = async () => {
@@ -320,19 +337,20 @@ const fetchOrder = async () => {
 // Get status class based on order status
 const getStatusClass = (status) => {
   const statusClasses = {
-    'Pending': 'bg-yellow-100 text-yellow-800',
-    'Processing': 'bg-blue-100 text-blue-800',
-    'Shipped': 'bg-purple-100 text-purple-800',
-    'Delivered': 'bg-green-100 text-green-800',
-    'Cancelled': 'bg-red-100 text-red-800'
+    'pending': 'bg-yellow-100 text-yellow-800',
+    'processing': 'bg-blue-100 text-blue-800',
+    'shipped': 'bg-purple-100 text-purple-800',
+    'delivered': 'bg-green-100 text-green-800',
+    'cancelled': 'bg-red-100 text-red-800 border border-red-400 font-bold'
   };
   
-  return statusClasses[status] || 'bg-gray-100 text-gray-800';
+  return statusClasses[status.toLowerCase()] || 'bg-gray-100 text-gray-800';
 };
 
 // Get status text
 const getStatusText = (status) => {
-  return status;
+  // First letter uppercase
+  return status.charAt(0).toUpperCase() + status.slice(1).toLowerCase();
 };
 
 // Get payment method text
@@ -358,11 +376,13 @@ const formatPrice = (price) => {
 
 // Cancel order
 const cancelOrder = async () => {
-  if (!confirm('Are you sure you want to cancel this order?')) {
-    return;
-  }
-  
+  showCancelModal.value = true;
+};
+
+// Handle confirmation
+const handleConfirmCancel = async () => {
   isCancelling.value = true;
+  showCancelModal.value = false;
   
   try {
     await orderService.cancelOrder(order.value._id);
@@ -376,6 +396,11 @@ const cancelOrder = async () => {
   } finally {
     isCancelling.value = false;
   }
+};
+
+// Close modal
+const closeModal = () => {
+  showCancelModal.value = false;
 };
 
 // Fetch order when component is mounted

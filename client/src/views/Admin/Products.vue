@@ -205,6 +205,18 @@
       </div>
     </div>
   </div>
+
+  <!-- Product Deletion Confirmation Modal -->
+  <ConfirmationModal
+    :is-open="showDeleteModal"
+    title="Delete Product"
+    message="Are you sure you want to delete this product? This action cannot be undone."
+    confirm-text="Yes, Delete Product"
+    cancel-text="No, Keep Product"
+    type="danger"
+    @confirm="confirmDeleteProduct"
+    @cancel="hideDeleteModal"
+  />
 </template>
 
 <script setup>
@@ -216,6 +228,7 @@ import { collectionService } from '../../services/collectionService';
 import { useToast }  from 'vue-toastification';
 import ProductForm from '../../components/ProductForm.vue';
 import Pagination from '../../components/organisms/Pagination/index.vue';
+import ConfirmationModal from '@/components/molecules/ConfirmationModal.vue';
 
 const toast = useToast();
 const products = ref([]);
@@ -235,6 +248,10 @@ const showModal = ref(false);
 const selectedProduct = ref({});
 const productForm = ref(null);
 const error = ref(null);
+
+// Add modal state for delete confirmation
+const showDeleteModal = ref(false);
+const productToDelete = ref(null);
 
 const formatPrice = (price) => {
   return new Intl.NumberFormat('en-US', {
@@ -301,14 +318,17 @@ const changePage = (page) => {
 };
 
 const deleteProduct = async (productId) => {
-  if (!productId || !confirm('Are you sure you want to delete this product?')) {
-    return;
-  }
+  if (!productId) return;
+  
+  productToDelete.value = productId;
+  showDeleteModal.value = true;
+};
 
+const confirmDeleteProduct = async () => {
   try {
     loading.value = true;
     error.value = null;
-    await productService.delete(productId);
+    await productService.delete(productToDelete.value);
     toast.success('Product successfully deleted');
     await loadProducts();
   } catch (err) {
@@ -317,7 +337,13 @@ const deleteProduct = async (productId) => {
     toast.error(error.value);
   } finally {
     loading.value = false;
+    hideDeleteModal();
   }
+};
+
+const hideDeleteModal = () => {
+  showDeleteModal.value = false;
+  productToDelete.value = null;
 };
 
 const openModal = () => {

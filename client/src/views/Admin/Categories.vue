@@ -241,6 +241,18 @@
         </button>
       </template>
     </Modal>
+
+    <!-- Category Deletion Confirmation Modal -->
+    <ConfirmationModal
+      :is-open="showDeleteModal"
+      title="Delete Category"
+      message="Are you sure you want to delete this category? This action cannot be undone."
+      confirm-text="Yes, Delete Category"
+      cancel-text="No, Keep Category"
+      type="danger"
+      @confirm="confirmDeleteCategory"
+      @cancel="hideDeleteModal"
+    />
   </div>
 </template>
 
@@ -250,9 +262,10 @@ import Modal from '../../components/Modal.vue';
 import { categoryService } from '../../services/categoryService';
 import { useToast } from 'vue-toastification';
 import Pagination from '../../components/organisms/Pagination/index.vue';
+import ConfirmationModal from '@/components/molecules/ConfirmationModal.vue';
 
 export default {
-  components: { Modal, Pagination },
+  components: { Modal, Pagination, ConfirmationModal },
   setup() {
     const toast = useToast();
     const categories = ref([]);
@@ -388,20 +401,34 @@ export default {
       }
     };
 
-    const deleteCategory = async (id) => {
-      if (confirm('Are you sure you want to delete this category?')) {
-        try {
-          loading.value = true;
-          await categoryService.delete(id);
-          toast.success('Category deleted successfully');
-          await loadCategories();
-        } catch (error) {
-          toast.error('An error occurred while deleting the category');
-          console.error('Error deleting category:', error);
-        } finally {
-          loading.value = false;
-        }
+    // Add modal state for delete confirmation
+    const showDeleteModal = ref(false);
+    const categoryToDelete = ref(null);
+
+    const deleteCategory = async (categoryId) => {
+      categoryToDelete.value = categoryId;
+      showDeleteModal.value = true;
+    };
+
+    const confirmDeleteCategory = async () => {
+      try {
+        loading.value = true;
+        
+        await categoryService.delete(categoryToDelete.value);
+        toast.success('Category deleted successfully');
+        await loadCategories();
+      } catch (error) {
+        console.error('Error deleting category:', error);
+        toast.error('Failed to delete category: ' + (error.response?.data?.message || error.message));
+      } finally {
+        loading.value = false;
+        hideDeleteModal();
       }
+    };
+
+    const hideDeleteModal = () => {
+      showDeleteModal.value = false;
+      categoryToDelete.value = null;
     };
 
     // Find parent category name
@@ -436,7 +463,10 @@ export default {
       setPage,
       nextPage,
       prevPage,
-      pageSize
+      pageSize,
+      showDeleteModal,
+      hideDeleteModal,
+      confirmDeleteCategory
     };
   }
 }

@@ -30,7 +30,7 @@ export const apiRequest = async (method, url, data = null, params = {}, options 
         response = await api.put(url, data, { params, ...options });
         break;
       case 'delete':
-        response = await api.delete(url, { data, params, ...options });
+        response = await api.delete(url, { ...options });
         break;
       default:
         throw new Error(`Unsupported HTTP method: ${method}`);
@@ -94,7 +94,8 @@ export const API_ENDPOINTS = {
   AUTH: '/auth',
   ORDERS: '/orders',
   PAYMENTS: '/payments',
-  UPLOADS: '/uploads'
+  UPLOADS: '/uploads',
+  SUBSCRIPTIONS: '/subscriptions'
 };
 
 export default {

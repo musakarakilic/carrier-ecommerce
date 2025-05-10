@@ -9,7 +9,6 @@ const router = useRouter();
 
 // Handle auth events
 const handleAuthLogout = (event) => {
-  console.log('Auth logout event received:', event.detail);
   // Use the auth store's logout method instead of page reload
   authStore.logout();
   

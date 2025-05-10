@@ -69,7 +69,7 @@ import CardRating from './CardRating.vue';
 import CardPrice from './CardPrice.vue';
 
 // Get environment variables
-const IMAGE_BASE_URL = import.meta.env.VITE_IMAGE_BASE_URL || 'http://localhost:5000';
+const IMAGE_BASE_URL = import.meta.env.VITE_IMAGE_BASE_URL || 'https://carrier-ecommerce.onrender.com';
 
 const router = useRouter();
 const toast = useToast();

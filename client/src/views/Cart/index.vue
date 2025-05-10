@@ -172,6 +172,18 @@
       </div>
     </div>
   </div>
+  
+  <!-- Clear Cart Confirmation Modal -->
+  <ConfirmationModal
+    :is-open="showClearCartModal"
+    title="Clear Cart"
+    message="Are you sure you want to remove all items from your cart? This action cannot be undone."
+    confirm-text="Yes, Clear Cart"
+    cancel-text="No, Keep Items"
+    type="danger"
+    @confirm="confirmClearCart"
+    @cancel="cancelClearCart"
+  />
 </template>
 
 <script setup>
@@ -179,10 +191,14 @@ import { ref, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { useToast } from 'vue-toastification';
 import { useCartStore } from '../../stores/cart';
+import ConfirmationModal from '@/components/molecules/ConfirmationModal.vue';
 
 const router = useRouter();
 const toast = useToast();
 const cartStore = useCartStore();
+
+// Confirmation modal state
+const showClearCartModal = ref(false);
 
 // Cart items
 const cartItems = computed(() => cartStore.items);
@@ -231,10 +247,17 @@ const removeFromCart = (productId) => {
 
 // Clear all products
 const clearCart = () => {
-  if (confirm('Are you sure you want to remove all items from your cart?')) {
-    cartStore.clearCart();
-    toast.success('Cart cleared');
-  }
+  showClearCartModal.value = true;
+};
+
+const confirmClearCart = () => {
+  cartStore.clearCart();
+  toast.success('Cart cleared');
+  showClearCartModal.value = false;
+};
+
+const cancelClearCart = () => {
+  showClearCartModal.value = false;
 };
 
 // Apply coupon

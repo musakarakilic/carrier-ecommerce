@@ -14,10 +14,18 @@ export const paymentService = {
   // Create Stripe payment intent
   createPaymentIntent: async (orderId, amount) => {
     try {
-      return await apiRequest('post', `${API_ENDPOINTS.PAYMENTS}/create-payment-intent`, { 
-        orderId,
-        amount 
-      });
+      // If orderId is provided, send it to the server
+      if (orderId) {
+        return await apiRequest('post', `${API_ENDPOINTS.PAYMENTS}/create-payment-intent`, { 
+          orderId,
+          amount 
+        });
+      } else {
+        // Otherwise just send the amount
+        return await apiRequest('post', `${API_ENDPOINTS.PAYMENTS}/create-payment-intent`, { 
+          amount 
+        });
+      }
     } catch (error) {
       logError('Error creating payment intent', error, 'paymentService');
       throw error;

@@ -1,11 +1,12 @@
 // client/src/services/subscriptionService.js
-import { API_ENDPOINTS, apiRequest, logError } from '../utils';
+import { apiRequest, API_ENDPOINTS } from '../utils/http-helpers';
+import { logError } from '../utils/logger';
 
 export const subscriptionService = {
   // Subscribe to newsletter
   async subscribe(email) {
     try {
-      return await apiRequest('post', `${API_ENDPOINTS.COLLECTIONS}/subscribe`, { email });
+      return await apiRequest('post', `${API_ENDPOINTS.SUBSCRIPTIONS}/subscribe`, { email });
     } catch (error) {
       logError('Error creating newsletter subscription', error, 'subscriptionService');
       throw error;
@@ -15,7 +16,7 @@ export const subscriptionService = {
   // Unsubscribe from newsletter
   async unsubscribe(email) {
     try {
-      return await apiRequest('get', `${API_ENDPOINTS.COLLECTIONS}/unsubscribe/${email}`);
+      return await apiRequest('get', `${API_ENDPOINTS.SUBSCRIPTIONS}/unsubscribe/${email}`);
     } catch (error) {
       logError('Error unsubscribing from newsletter', error, 'subscriptionService');
       throw error;
@@ -27,7 +28,7 @@ export const subscriptionService = {
   // Get all subscriptions
   async getAll(params = {}) {
     try {
-      return await apiRequest('get', '/subscriptions', null, params);
+      return await apiRequest('get', API_ENDPOINTS.SUBSCRIPTIONS, null, params);
     } catch (error) {
       logError('Error getting subscriptions', error, 'subscriptionService');
       throw error;
@@ -37,7 +38,7 @@ export const subscriptionService = {
   // Reactivate subscription
   async resubscribe(email) {
     try {
-      return await apiRequest('get', `/subscriptions/resubscribe/${email}`);
+      return await apiRequest('get', `${API_ENDPOINTS.SUBSCRIPTIONS}/resubscribe/${email}`);
     } catch (error) {
       logError('Error reactivating subscription', error, 'subscriptionService');
       throw error;
@@ -47,7 +48,7 @@ export const subscriptionService = {
   // Delete subscription
   async delete(id) {
     try {
-      return await apiRequest('delete', `/subscriptions/${id}`);
+      return await apiRequest('delete', `${API_ENDPOINTS.SUBSCRIPTIONS}/${id}`);
     } catch (error) {
       logError('Error deleting subscription', error, 'subscriptionService');
       throw error;

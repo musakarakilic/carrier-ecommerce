@@ -80,11 +80,20 @@
                       Edit
                     </button>
                     <button
-                      @click="deleteUser(user._id)"
+                      v-if="user.isActive"
+                      @click="deactivateUser(user._id)"
                       class="text-red-600 hover:text-red-900"
                       :disabled="loading"
                     >
-                      Soft Delete
+                      Deactivate
+                    </button>
+                    <button
+                      v-else
+                      @click="activateUser(user._id)"
+                      class="text-green-600 hover:text-green-900"
+                      :disabled="loading"
+                    >
+                      Activate
                     </button>
                   </td>
                 </tr>
@@ -296,6 +305,30 @@
         </button>
       </template>
     </Modal>
+
+    <!-- User Deactivation Confirmation Modal -->
+    <ConfirmationModal
+      :is-open="showDeactivateModal"
+      title="Deactivate User"
+      message="Are you sure you want to deactivate this user? The user will be marked as inactive but their data will remain in the system."
+      confirm-text="Yes, Deactivate User"
+      cancel-text="No, Keep Active"
+      type="warning"
+      @confirm="confirmDeactivateUser"
+      @cancel="hideDeactivateModal"
+    />
+
+    <!-- User Activation Confirmation Modal -->
+    <ConfirmationModal
+      :is-open="showActivateModal"
+      title="Activate User"
+      message="Are you sure you want to activate this user? The user will be marked as active."
+      confirm-text="Yes, Activate User"
+      cancel-text="No, Keep Inactive"
+      type="success"
+      @confirm="confirmActivateUser"
+      @cancel="hideActivateModal"
+    />
   </div>
 </template>
 
@@ -305,6 +338,7 @@ import Modal from '../../components/Modal.vue';
 import { userService } from '../../services/userService';
 import Pagination from '../../components/organisms/Pagination/index.vue';
 import { useToast } from 'vue-toastification';
+import ConfirmationModal from '@/components/molecules/ConfirmationModal.vue';
 
 const toast = useToast();
 const users = ref([]);
@@ -324,6 +358,14 @@ const formData = ref({
   password: '',
   profileImage: ''
 });
+
+// Deactivation modal state
+const showDeactivateModal = ref(false);
+const userToDeactivate = ref(null);
+
+// Activation modal state
+const showActivateModal = ref(false);
+const userToActivate = ref(null);
 
 // Profile photo
 const imageFile = ref(null);
@@ -511,22 +553,54 @@ const saveUser = async () => {
   }
 };
 
-const deleteUser = async (id) => {
-  if (confirm('Are you sure you want to deactivate this user? The user will be marked as inactive but their data will remain in the system.')) {
+const deactivateUser = (userId) => {
+  userToDeactivate.value = userId;
+  showDeactivateModal.value = true;
+};
+
+const confirmDeactivateUser = async () => {
+  try {
     loading.value = true;
-    error.value = '';
-    
-    try {
-      await userService.delete(id);
-      toast.success('User successfully deactivated');
-      await fetchUsers();
-    } catch (err) {
-      error.value = err.response?.data?.message || 'An error occurred while deactivating the user';
-      console.error('Error deactivating user:', err);
-    } finally {
-      loading.value = false;
-    }
+    await userService.updateStatus(userToDeactivate.value, false);
+    toast.success('User deactivated successfully');
+    fetchUsers(); // Refresh list
+  } catch (error) {
+    console.error('Error deactivating user:', error);
+    toast.error('Failed to deactivate user: ' + (error.response?.data?.message || error.message));
+  } finally {
+    loading.value = false;
+    hideDeactivateModal();
   }
+};
+
+const hideDeactivateModal = () => {
+  showDeactivateModal.value = false;
+  userToDeactivate.value = null;
+};
+
+const activateUser = (userId) => {
+  userToActivate.value = userId;
+  showActivateModal.value = true;
+};
+
+const confirmActivateUser = async () => {
+  try {
+    loading.value = true;
+    await userService.activateUser(userToActivate.value);
+    toast.success('User activated successfully');
+    fetchUsers(); // Refresh list
+  } catch (error) {
+    console.error('Error activating user:', error);
+    toast.error('Failed to activate user: ' + (error.response?.data?.message || error.message));
+  } finally {
+    loading.value = false;
+    hideActivateModal();
+  }
+};
+
+const hideActivateModal = () => {
+  showActivateModal.value = false;
+  userToActivate.value = null;
 };
 
 // Helper function to create user's full name

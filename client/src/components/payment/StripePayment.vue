@@ -17,6 +17,7 @@
     </div>
     
     <div class="stripe-payment-form mt-4" :class="{ 'hidden': loading || error }">
+      
       <div class="mb-6">
         <label for="cardElement" class="block text-sm font-medium text-gray-700 mb-1">
           Card Information
@@ -55,13 +56,14 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted, nextTick } from 'vue';
+import { ref, onMounted, onUnmounted, nextTick, reactive } from 'vue';
 import { paymentService } from '@/services/paymentService';
 
 const props = defineProps({
   orderId: {
     type: String,
-    required: true
+    required: false,
+    default: null
   },
   amount: {
     type: Number,
@@ -80,6 +82,10 @@ const loading = ref(true);
 const processing = ref(false);
 const error = ref(null);
 const cardError = ref(null);
+const customerInfo = reactive({
+  firstName: '',
+  lastName: ''
+});
 
 // Initialize Stripe
 const initializeStripe = async () => {
@@ -101,15 +107,26 @@ const initializeStripe = async () => {
     }
     
     // Create Stripe object
-    console.log('Stripe API Key status:', import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY ? 'Available' : 'Missing');
     stripe.value = window.Stripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
     
     // Create payment intent
-    const response = await paymentService.createPaymentIntent(props.orderId, props.amount);
-    clientSecret.value = response.clientSecret;
+    let clientSecretResponse;
     
-    // Create Elements and CardElement
-    elements.value = stripe.value.elements();
+    if (props.orderId) {
+      // If orderId exists, use it
+      clientSecretResponse = await paymentService.createPaymentIntent(props.orderId, props.amount);
+    } else {
+      // Otherwise create intent with just the amount
+      clientSecretResponse = await paymentService.createPaymentIntent(null, props.amount);
+    }
+    
+    clientSecret.value = clientSecretResponse.clientSecret;
+    
+    // Create Elements and CardElement with English locale
+    elements.value = stripe.value.elements({
+      locale: 'en'
+    });
+    
     cardElement.value = elements.value.create('card', {
       style: {
         base: {
@@ -139,7 +156,6 @@ const initializeStripe = async () => {
       cardElementContainer = document.getElementById('cardElement');
       
       if (!cardElementContainer) {
-        console.log(`cardElement DOM element not found, attempt ${attempts + 1}/10`);
         await new Promise(resolve => setTimeout(resolve, 100)); // Wait 100ms
         attempts++;
       }
@@ -149,7 +165,6 @@ const initializeStripe = async () => {
       throw new Error('cardElement DOM element not found after 10 attempts');
     }
     
-    console.log('cardElement DOM element found, mounting...');
     
     // Mount CardElement to DOM
     cardElement.value.mount('#cardElement');
@@ -180,7 +195,7 @@ const processPayment = async () => {
         payment_method: {
           card: cardElement.value,
           billing_details: {
-            // Customer information can be added here
+            name: `${customerInfo.firstName} ${customerInfo.lastName}`.trim()
           }
         }
       }
@@ -192,34 +207,8 @@ const processPayment = async () => {
     } else {
       // Payment successful
       if (paymentIntent.status === 'succeeded') {
-        console.log('Stripe payment successful, clearing cart...', paymentIntent);
         
-        // Extra precaution to clear cart immediately here
-        try {
-          window.localStorage.removeItem('cart');
-          console.log('Cart cleared by Stripe component');
-          
-          // Check if localStorage was actually cleared
-          if (!window.localStorage.getItem('cart')) {
-            console.log('Cart successfully cleared! localStorage.cart:', window.localStorage.getItem('cart'));
-          } else {
-            console.error('WARNING: localStorage.cart still exists:', window.localStorage.getItem('cart'));
-            // Try one more time
-            window.localStorage.clear(); // Clear all localStorage (not just cart)
-            console.log('All localStorage cleared');
-          }
-        } catch (e) {
-          console.error('Cart clearing error (Stripe):', e);
-          // Try alternative clearing method
-          try {
-            window.localStorage.setItem('cart', '');
-            console.log('Alternative clearing method applied');
-          } catch (e2) {
-            console.error('Second clearing attempt also failed:', e2);
-          }
-        }
-        
-        // Send successful payment information to parent component
+        // Emit success event with payment intent
         emit('payment-success', paymentIntent);
       } else {
         cardError.value = 'Payment status in unexpected state: ' + paymentIntent.status;
@@ -239,8 +228,6 @@ const processPayment = async () => {
 onMounted(() => {
   // Add delay to ensure DOM is completely ready
   setTimeout(() => {
-    console.log('StripePayment component mounted, calling initializeStripe');
-    console.log('cardElement DOM status:', document.getElementById('cardElement') ? 'Exists in DOM' : 'Not found in DOM');
     
     // Check if element with cardElement id exists in DOM
     if (document.getElementById('cardElement')) {

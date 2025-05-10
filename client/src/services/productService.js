@@ -1,8 +1,20 @@
 import api from './api';
 import axios from 'axios';
 
-// process.env doesn't work in browser, defining URL directly
-const API_URL = 'http://localhost:5000/api';
+// Use environment variable with fallback to production URL
+const API_URL = import.meta.env.VITE_API_BASE_URL 
+  ? `${import.meta.env.VITE_API_BASE_URL}${import.meta.env.VITE_API_ENDPOINT || '/api'}`
+  : 'https://carrier-ecommerce.onrender.com/api';
+
+// Log the API URL for debugging
+console.log('ProductService: Using API URL:', API_URL);
+
+// Create a configured axios instance
+const axiosProduct = axios.create({
+  baseURL: API_URL,
+  timeout: 10000,
+  withCredentials: true
+});
 
 export const productService = {
   // Get all products
@@ -41,21 +53,17 @@ export const productService = {
     formData.append('image', file);
     
     try {
-      console.log('Sending image upload request...');
       
       // Specify upload URL exactly
-      const uploadURL = `${API_URL}/uploads/products/single`;
-      console.log('Upload URL:', uploadURL);
+      const uploadURL = `/uploads/products/single`;
       
-      // Upload directly to server
-      const response = await axios.post(uploadURL, formData, {
+      // Upload directly to server using configured axios instance
+      const response = await axiosProduct.post(uploadURL, formData, {
         headers: {
           'Content-Type': 'multipart/form-data'
-        },
-        withCredentials: true
+        }
       });
       
-      console.log('Image upload response:', response.data);
       
       if (response.data && response.data.url) {
         return response.data;
@@ -197,7 +205,8 @@ export const productService = {
   // Get featured products
   async getFeaturedProducts(limit = 8) {
     try {
-      const response = await axios.get(`${API_URL}/products/featured`, {
+      // Using the configured axios instance
+      const response = await axiosProduct.get(`/products/featured`, {
         params: { limit }
       });
       return response.data;
@@ -230,8 +239,8 @@ export const productService = {
         }
       }
       
-      // Send to API
-      const response = await axios.get(`${API_URL}/products/new`, {
+      // Using the configured axios instance
+      const response = await axiosProduct.get(`/products/new`, {
         params: apiParams
       });
       
@@ -274,8 +283,8 @@ export const productService = {
    
       console.log('ProductService: Parameters being sent to API:', apiParams);
       
-      // Send to API
-      const response = await axios.get(`${API_URL}/products/bestsellers`, {
+      // Using the configured axios instance
+      const response = await axiosProduct.get(`/products/bestsellers`, {
         params: apiParams
       });
       
@@ -292,7 +301,8 @@ export const productService = {
   // Get discounted products
   async getDiscountedProducts() {
     try {
-      const response = await axios.get(`${API_URL}/products/discounted`);
+      // Using the configured axios instance
+      const response = await axiosProduct.get(`/products/discounted`);
       return response.data;
     } catch (error) {
       console.error('Error loading discounted products:', error);
@@ -303,7 +313,7 @@ export const productService = {
   // Add product to collection
   async addProductToCollection(productId, collectionId, token) {
     try {
-      const response = await axios.post(`${API_URL}/products/collection`, 
+      const response = await axiosProduct.post(`/products/collection`, 
         { 
           productId, 
           collectionId,
@@ -325,7 +335,7 @@ export const productService = {
   // Remove product from collection
   async removeProductFromCollection(productId, collectionId, token) {
     try {
-      const response = await axios.post(`${API_URL}/products/collection`, 
+      const response = await axiosProduct.post(`/products/collection`, 
         { 
           productId, 
           collectionId,

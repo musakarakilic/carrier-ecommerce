@@ -67,7 +67,7 @@ npm install
 
 # Set up environment variables
 # Create a .env file with the following variables:
-# VITE_API_URL=http://localhost:5000/api
+# VITE_API_URL=https://carrier-ecommerce.onrender.com/api
 
 # Start development server
 npm run dev
@@ -85,9 +85,10 @@ npm install
 # Set up environment variables
 # Create a .env file with the following variables:
 # PORT=5000
-# MONGODB_URI=mongodb://localhost:27017/ecommerce
+# MONGODB_URI=your_mongodb_atlas_uri
 # JWT_SECRET=your_jwt_secret
 # STRIPE_SECRET_KEY=your_stripe_secret_key
+# FRONTEND_URL=https://carrier-ecommerce.vercel.app
 
 # Start development server
 npm run dev

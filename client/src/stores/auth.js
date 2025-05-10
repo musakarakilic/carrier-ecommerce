@@ -3,7 +3,7 @@ import router from '../router';
 import api from '../services/api';
 
 // Get environment variables
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://carrier-ecommerce.onrender.com';
 const API_ENDPOINT = import.meta.env.VITE_API_ENDPOINT || '/api';
 const API_URL = `${API_BASE_URL}${API_ENDPOINT}`;
 

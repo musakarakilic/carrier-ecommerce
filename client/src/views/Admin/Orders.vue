@@ -111,7 +111,7 @@
                   'bg-blue-100 text-blue-800': order.status === 'processing',
                   'bg-yellow-100 text-yellow-800': order.status === 'shipped',
                   'bg-green-100 text-green-800': order.status === 'delivered',
-                  'bg-red-100 text-red-800': order.status === 'cancelled'
+                  'bg-red-100 text-red-800 border border-red-400 font-bold': order.status === 'cancelled'
                 }"
               >
                 {{ getOrderStatusLabel(order.status) }}
@@ -172,6 +172,17 @@
               <p><span class="font-medium">Name:</span> {{ selectedOrder.customer.name }}</p>
               <p><span class="font-medium">Email:</span> {{ selectedOrder.customer.email }}</p>
               <p><span class="font-medium">Phone:</span> {{ selectedOrder.customer.phone }}</p>
+              <p class="mt-2"><span class="font-medium">Payment Method:</span> 
+                <span 
+                  :class="{
+                    'px-2 py-1 ml-1 text-xs font-medium rounded-full': true,
+                    'bg-blue-100 text-blue-800': selectedOrder.paymentMethod === 'creditCard',
+                    'bg-green-100 text-green-800': selectedOrder.paymentMethod === 'cashOnDelivery'
+                  }"
+                >
+                  {{ getPaymentMethodLabel(selectedOrder.paymentMethod) }}
+                </span>
+              </p>
             </div>
             <div>
               <h3 class="text-lg font-medium mb-2">Shipping Information</h3>
@@ -334,6 +345,11 @@ const fetchOrders = async () => {
       headers: { Authorization: `Bearer ${token}` }
     });
     
+    // Log raw order data to debug payment methods
+    if (response.data && Array.isArray(response.data.orders) && response.data.orders.length > 0) {
+
+    }
+    
     // Convert to orders.controller.js format
     const ordersData = Array.isArray(response.data) ? response.data : 
                        (response.data.orders && Array.isArray(response.data.orders)) ? response.data.orders : [];
@@ -364,6 +380,8 @@ const fetchOrders = async () => {
         discount: 0, // Add discount information if available
         total: order.totalPrice || 0,
         paymentStatus: order.isPaid ? 'paid' : 'pending',
+        paymentMethod: order.paymentMethod === 'stripe' || order.paymentMethod === 'Stripe' || 
+                      (order.isPaid && !order.paymentMethod?.includes('cash')) ? 'creditCard' : 'cashOnDelivery',
         status: getOrderStatusKey(order.status),
         trackingNumber: order.trackingNumber || '',
         shippingAddress: {
@@ -527,6 +545,14 @@ const getOrderStatusLabel = (status) => {
     case 'delivered': return 'Delivered';
     case 'cancelled': return 'Cancelled';
     default: return status;
+  }
+};
+
+const getPaymentMethodLabel = (method) => {
+  switch (method) {
+    case 'creditCard': return 'Credit Card';
+    case 'cashOnDelivery': return 'Cash on Delivery';
+    default: return method || 'Not specified';
   }
 };
 

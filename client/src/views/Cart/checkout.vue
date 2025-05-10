@@ -232,21 +232,12 @@
                 </label>
                 
                 <div v-if="form.paymentMethod === 'stripe' && stripeVisible" class="p-5 bg-gray-50 border-t border-gray-200 space-y-5">
-                  <!-- Stripe payment form will be shown here after order creation -->
-                  <div v-if="orderId">
-                    <StripePayment 
-                      :order-id="orderId" 
-                      :amount="total"
-                      @payment-success="handlePaymentSuccess" 
-                      @payment-error="handlePaymentError"
-                    />
-                  </div>
-                  <div v-else>
-                    <div class="flex items-center justify-center py-4">
-                      <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
-                      <span class="ml-2 text-sm text-gray-600">Preparing payment module...</span>
-                    </div>
-                  </div>
+                  <!-- Stripe payment form without requiring orderId first -->
+                  <StripePayment 
+                    :amount="total"
+                    @payment-success="handleStripeSuccess" 
+                    @payment-error="handlePaymentError"
+                  />
                 </div>
               </div>
               
@@ -598,7 +589,29 @@ const validateForm = () => {
   return Object.keys(newErrors).length === 0;
 };
 
-// Complete order
+// When payment method changes
+const onPaymentMethodChange = async () => {
+  if (form.value.paymentMethod === 'stripe') {
+    // Show Stripe form
+    stripeVisible.value = true;
+    
+    // Make sure form is valid
+    if (!validateForm()) {
+      toast.error('Please complete all shipping information.');
+      form.value.paymentMethod = ''; // Reset payment method selection
+      stripeVisible.value = false;
+      return;
+    }
+  } else {
+    // For cash_on_delivery, just update UI
+    stripeVisible.value = false;
+  }
+  
+  // Clear any previous order ID
+  orderId.value = null;
+};
+
+// Complete order - only for cash on delivery
 const submitOrder = async () => {
   // Check form validation in step 1
   if (currentStep.value === 1) {
@@ -616,98 +629,38 @@ const submitOrder = async () => {
     return;
   }
   
-  // If Stripe is selected and order is created, show payment form
-  if (form.value.paymentMethod === 'stripe' && orderId.value) {
-    // User is on payment screen, Confirm Order button is already disabled
+  // For Stripe payments, don't do anything here - handled in handleStripeSuccess
+  if (form.value.paymentMethod === 'stripe') {
     return;
   }
   
-  // Create order in step 2
+  // For Cash on Delivery, create order
   isSubmitting.value = true;
   
   try {
-    // Convert proxy object to normal JSON
-    const cartItemsJSON = JSON.parse(JSON.stringify(cartItems.value));
-    
-    // Check if cart is empty
-    if (!cartItemsJSON || !Array.isArray(cartItemsJSON) || cartItemsJSON.length === 0) {
-      toast.error('Your cart appears to be empty. Please add items to your cart first.');
+    // Validate cart items
+    if (!validateCartItems()) {
       isSubmitting.value = false;
       return;
     }
     
-    // Detect invalid items
-    let hasInvalidItems = false;
-    const orderItems = cartItemsJSON.map(item => {
-      // Check product ID in different fields
-      const productId = item._id || item.product || item.productId;
-      
-      if (!productId) {
-        console.error('Invalid item found:', item);
-        hasInvalidItems = true;
-        return null;
-      }
-      
-      return {
-        product: productId,
-        quantity: item.quantity
-      };
-    }).filter(item => item !== null);
+    // Create order
+    const orderData = prepareOrderData();
     
-    if (hasInvalidItems) {
-      toast.error('There are identification errors in some items in your cart. Please clear your cart and try again.');
-      isSubmitting.value = false;
-      return;
-    }
-    
-    if (orderItems.length === 0) {
-      toast.error('No valid items found in your cart.');
-      isSubmitting.value = false;
-      return;
-    }
-    
-    // Prepare order data
-    const orderData = {
-      orderItems: orderItems,
-      shippingAddress: {
-        fullName: `${form.value.firstName} ${form.value.lastName}`,
-        address: form.value.address,
-        city: form.value.city,
-        postalCode: form.value.postalCode,
-        country: 'Turkey',
-        phone: form.value.phone
-      },
-      paymentMethod: form.value.paymentMethod === 'stripe' ? 'credit_card' : 'cash_on_delivery',
-      itemsPrice: subtotal.value,
-      shippingPrice: isShippingFree.value ? 0 : shippingCost.value,
-      taxPrice: calculateTax(),
-      totalPrice: total.value,
-      notes: ''
-    };
-    
-    // Send order request to API
+    // Send order request to API - only for cash on delivery
     const result = await orderService.createOrder(orderData);
     
     // Save order ID
     orderId.value = result._id || result.order._id;
     
-    // Redirect based on payment method
-    if (form.value.paymentMethod !== 'stripe') {
-      // Cash on delivery: Clear cart and redirect to confirmation page
-      localStorage.removeItem('cart');
-      // More effective cart clearing
-      cartStore.clearCart();
-      window.localStorage.setItem('cart', '[]');
-      
-      toast.success('Your order has been successfully created!');
-      router.push({
-        path: '/order-confirmation',
-        query: { orderId: orderId.value }
-      });
-    } else {
-      // Redirect to payment widget for Stripe payment
-      toast.success('Please enter your card details to complete the payment.');
-    }
+    // Clear cart and redirect to confirmation page
+    clearCart();
+    
+    toast.success('Your order has been successfully created!');
+    router.push({
+      path: '/order-confirmation',
+      query: { orderId: orderId.value }
+    });
   } catch (error) {
     toast.error(error.response?.data?.message || 'An error occurred while creating your order. Please try again.');
   } finally {
@@ -715,53 +668,107 @@ const submitOrder = async () => {
   }
 };
 
-// When Stripe payment is successful
-const handlePaymentSuccess = async (paymentIntent) => {
-  // Update payment status on server
-  try {
-    // Update directly using order service
-    await orderService.updatePaymentStatus(orderId.value, paymentIntent);
-  } catch (error) {
-    // Continue even if there's an error
+// Validate cart items - helper function
+const validateCartItems = () => {
+  // Convert proxy object to normal JSON
+  const cartItemsJSON = JSON.parse(JSON.stringify(cartItems.value));
+  
+  // Check if cart is empty
+  if (!cartItemsJSON || !Array.isArray(cartItemsJSON) || cartItemsJSON.length === 0) {
+    toast.error('Your cart appears to be empty. Please add items to your cart first.');
+    return false;
   }
   
-  // Clear cart - try multiple ways to ensure it's cleared
-  try {
-    // Method 1: removeItem
-    window.localStorage.removeItem('cart');
-    // Method 2: Set cart as empty array
-    window.localStorage.setItem('cart', '[]');
-    // Method 3: Clear local state
-    cartItems.value = [];
-    // Method 4: Clear via store
-    cartStore.clearCart();
-  } catch (error) {
-    // Continue despite error
-  }
+  return true;
+};
+
+// Prepare order data - helper function
+const prepareOrderData = () => {
+  const cartItemsJSON = JSON.parse(JSON.stringify(cartItems.value));
   
-  // Show success message
-  toast.success('Payment completed successfully! Your cart has been cleared.');
-  
-  // Redirect immediately
-  router.push({
-    path: '/order-confirmation',
-    query: { orderId: orderId.value, paymentId: paymentIntent.id }
-  });
-  
-  // Add window.onbeforeunload as extra precaution
-  window.onbeforeunload = () => {
-    window.localStorage.removeItem('cart');
-    return null;
-  };
-  
-  // Check one more time after completion
-  setTimeout(() => {
-    const remainingCart = window.localStorage.getItem('cart');
-    if (remainingCart && remainingCart !== '[]') {
-      window.localStorage.removeItem('cart');
-      window.localStorage.setItem('cart', '[]');
+  // Prepare order items
+  const orderItems = cartItemsJSON.map(item => {
+    // Check product ID in different fields
+    const productId = item._id || item.product || item.productId;
+    
+    if (!productId) {
+      console.error('Invalid item found:', item);
+      return null;
     }
-  }, 500);
+    
+    return {
+      product: productId,
+      quantity: item.quantity
+    };
+  }).filter(item => item !== null);
+  
+  // Prepare order data
+  return {
+    orderItems: orderItems,
+    shippingAddress: {
+      fullName: `${form.value.firstName} ${form.value.lastName}`,
+      address: form.value.address,
+      city: form.value.city,
+      postalCode: form.value.postalCode,
+      country: 'Turkey',
+      phone: form.value.phone
+    },
+    paymentMethod: form.value.paymentMethod === 'stripe' ? 'credit_card' : 'cash_on_delivery',
+    itemsPrice: subtotal.value,
+    shippingPrice: isShippingFree.value ? 0 : shippingCost.value,
+    taxPrice: calculateTax(),
+    totalPrice: total.value,
+    notes: ''
+  };
+};
+
+// Clear cart - helper function
+const clearCart = () => {
+  localStorage.removeItem('cart');
+  // More effective cart clearing
+  cartStore.clearCart();
+  window.localStorage.setItem('cart', '[]');
+};
+
+// When Stripe payment is successful - create order and redirect
+const handleStripeSuccess = async (paymentIntent) => {
+  isSubmitting.value = true;
+  
+  try {
+    // Validate cart items
+    if (!validateCartItems()) {
+      isSubmitting.value = false;
+      return;
+    }
+    
+    // Create order with Stripe payment
+    const orderData = prepareOrderData();
+    
+    // Create the order AFTER payment is successful
+    const result = await orderService.createOrder(orderData);
+    
+    // Save order ID
+    orderId.value = result._id || result.order._id;
+    
+    // Update payment status
+    await orderService.updatePaymentStatus(orderId.value, paymentIntent);
+    
+    // Clear cart
+    clearCart();
+    
+    // Show success message
+    toast.success('Payment completed and order created successfully!');
+    
+    // Redirect to confirmation page
+    router.push({
+      path: '/order-confirmation',
+      query: { orderId: orderId.value, paymentId: paymentIntent.id }
+    });
+  } catch (error) {
+    toast.error(error.response?.data?.message || 'An error occurred while creating your order. Please try again.');
+  } finally {
+    isSubmitting.value = false;
+  }
 };
 
 // When Stripe payment fails
@@ -781,93 +788,6 @@ const formatPrice = (price) => {
     maximumFractionDigits: 2
   });
 };
-
-// When payment method changes
-const onPaymentMethodChange = async () => {
-  if (form.value.paymentMethod === 'stripe') {
-    // If Stripe is selected and no order was created before, create order immediately
-    stripeVisible.value = true;
-    
-    if (!orderId.value) {
-      try {
-        isSubmitting.value = true;
-        
-        // Validate form
-        if (!validateForm()) {
-          toast.error('Please complete all shipping information.');
-          isSubmitting.value = false;
-          return;
-        }
-        
-        // Order creation process
-        const cartItemsJSON = JSON.parse(JSON.stringify(cartItems.value));
-        
-        // Detect invalid items
-        let hasInvalidItems = false;
-        const orderItems = cartItemsJSON.map(item => {
-          const productId = item._id || item.product || item.productId;
-          
-          if (!productId) {
-            hasInvalidItems = true;
-            return null;
-          }
-          
-          return {
-            product: productId,
-            quantity: item.quantity
-          };
-        }).filter(item => item !== null);
-        
-        if (hasInvalidItems || orderItems.length === 0) {
-          toast.error('There is a problem with your cart. Please check your cart.');
-          isSubmitting.value = false;
-          return;
-        }
-        
-        // Prepare order data
-        const orderData = {
-          orderItems: orderItems,
-          shippingAddress: {
-            fullName: `${form.value.firstName} ${form.value.lastName}`,
-            address: form.value.address,
-            city: form.value.city,
-            postalCode: form.value.postalCode,
-            country: 'Turkey',
-            phone: form.value.phone
-          },
-          paymentMethod: 'credit_card',
-          itemsPrice: subtotal.value,
-          shippingPrice: isShippingFree.value ? 0 : shippingCost.value,
-          taxPrice: calculateTax(),
-          totalPrice: total.value,
-          notes: ''
-        };
-        
-        // Create order
-        const result = await orderService.createOrder(orderData);
-        orderId.value = result._id || result.order._id;
-        
-        toast.success('You can now enter your card details.');
-      } catch (error) {
-        toast.error('An error occurred while loading the payment screen. Please try again.');
-        stripeVisible.value = false;
-      } finally {
-        isSubmitting.value = false;
-      }
-    }
-  } else if (orderId.value) {
-    // Reset order ID when switching from Stripe to another method
-    orderId.value = null;
-  }
-};
-
-// Watch payment method changes
-watch(() => form.value.paymentMethod, (newValue) => {
-  if (newValue !== 'stripe' && orderId.value) {
-    // If switching from Stripe to cash on delivery, a new order will be created
-    orderId.value = null;
-  }
-});
 
 // Functions for step transitions
 const nextStep = () => {
@@ -891,6 +811,23 @@ const prevStep = () => {
 onMounted(() => {
   loadCartItems();
   setupCartWatcher(); // Watch cart changes
+});
+
+// Watch payment method changes
+watch(() => form.value.paymentMethod, async (newValue, oldValue) => {
+  // Only attempt to cancel if there's an orderId and payment method actually changed
+  if (oldValue && newValue !== oldValue && orderId.value) {
+    try {
+      // Cancel previous order
+      await orderService.cancelOrder(orderId.value);
+      console.log('Order cancelled due to payment method change in watcher');
+    } catch (error) {
+      console.error('Error cancelling order in watcher:', error);
+    }
+    
+    // Reset order ID
+    orderId.value = null;
+  }
 });
 </script>
 

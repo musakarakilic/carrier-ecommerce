@@ -63,13 +63,15 @@ const productImages = computed(() => {
     return ['https://placehold.co/400'];
   }
   
+  const BASE_URL = import.meta.env.VITE_IMAGE_BASE_URL || 'https://carrier-ecommerce.onrender.com';
+  
   return props.images.map(image => {
     if (image.startsWith('/mock/')) {
       return 'https://placehold.co/400';
     } else if (image.startsWith('http')) {
       return image;
     } else {
-      return `http://localhost:5000${image}`;
+      return `${BASE_URL}${image}`;
     }
   });
 });

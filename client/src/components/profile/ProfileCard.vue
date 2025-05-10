@@ -146,7 +146,8 @@ const profileImageUrl = computed(() => {
     return props.user.profileImage;
   }
   
-  return `http://localhost:5000${props.user.profileImage}`;
+  const BASE_URL = import.meta.env.VITE_IMAGE_BASE_URL || 'https://carrier-ecommerce.onrender.com';
+  return `${BASE_URL}${props.user.profileImage}`;
 });
 
 // Birth date format
